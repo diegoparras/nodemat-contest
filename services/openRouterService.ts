@@ -7,9 +7,9 @@ interface OpenRouterMessage {
 }
 
 // Helper to estimate tokens (rough approximation: 4 chars = 1 token)
-const estimateTokens = (text: string): number => Math.ceil(text.length / 4);
+const estimateTokens = (text: string): number => Math.ceil((text || '').length / 4);
 
-// Helper to prune history based on max input tokens
+// Helper to prune history based on max input tokens (Context Window)
 const pruneHistory = (
   systemPrompt: string, 
   history: Message[], 
@@ -23,8 +23,6 @@ const pruneHistory = (
 
   // 1. Check if System Prompt itself exceeds the limit
   if (systemTokens > maxInputTokens) {
-     // Truncate system prompt roughly to fit
-     // We keep roughly maxInputTokens * 4 characters
      const maxChars = maxInputTokens * 4;
      effectiveSystemPrompt = systemPrompt.substring(0, maxChars) + "... [Truncado por límite]";
      currentTokens = estimateTokens(effectiveSystemPrompt);
@@ -32,28 +30,30 @@ const pruneHistory = (
      currentTokens = systemTokens;
   }
   
-  // If we already filled the budget with just the system prompt (or truncated version), return only that.
-  if (currentTokens >= maxInputTokens) {
-      return [{ role: 'system', content: effectiveSystemPrompt }];
-  }
-
-  // 2. Add history backwards until full
+  // 2. Prepare full history mapped correctly
+  // If Agent A is sending, Agent A's past messages are 'assistant', Agent B's are 'user'.
   const fullHistory: OpenRouterMessage[] = history.filter(m => m.sender !== 'System').map((msg) => ({
     role: msg.sender === currentAgentId ? 'assistant' : 'user',
     content: msg.text,
   }));
 
+  // 3. Add history backwards until full
   const keptMessages: OpenRouterMessage[] = [];
   
+  // Reserve space for the response (heuristic: 500 tokens safety buffer)
+  const availableForHistory = maxInputTokens - currentTokens - 500; 
+
+  let usedHistoryTokens = 0;
+
   for (let i = fullHistory.length - 1; i >= 0; i--) {
     const msg = fullHistory[i];
     const msgTokens = estimateTokens(msg.content);
     
-    if (currentTokens + msgTokens <= maxInputTokens) {
+    if (usedHistoryTokens + msgTokens <= availableForHistory) {
       keptMessages.unshift(msg);
-      currentTokens += msgTokens;
+      usedHistoryTokens += msgTokens;
     } else {
-      break; // Stop if we exceed limit
+      break; 
     }
   }
 
@@ -64,7 +64,6 @@ const pruneHistory = (
 // === Fetch Available Models Dynamically ===
 export const fetchModelsForProvider = async (provider: Provider, apiKey: string): Promise<OpenRouterModel[]> => {
   if (!apiKey && provider !== 'openrouter') {
-      // OpenRouter can sometimes list models without auth, but other providers need key
       throw new Error("API Key requerida para obtener modelos");
   }
 
@@ -72,8 +71,6 @@ export const fetchModelsForProvider = async (provider: Provider, apiKey: string)
     let url = "";
     let headers: any = { "Content-Type": "application/json" };
     
-    // Explicit Validation for OpenRouter
-    // Since /models is public, we must check the key validity separately against the auth endpoint
     if (provider === 'openrouter') {
         if (apiKey) {
             const authCheck = await fetch("https://openrouter.ai/api/v1/auth/key", {
@@ -81,11 +78,9 @@ export const fetchModelsForProvider = async (provider: Provider, apiKey: string)
                 headers: { "Authorization": `Bearer ${apiKey}` }
             });
             if (!authCheck.ok) {
-                // If the key check fails (e.g. 401 Unauthorized), stop here.
                 throw new Error("API Key de OpenRouter inválida o expirada");
             }
         } else {
-             // We decided to enforce keys in the UI, so throw if missing
              throw new Error("API Key requerida");
         }
 
@@ -110,24 +105,21 @@ export const fetchModelsForProvider = async (provider: Provider, apiKey: string)
     const data = await response.json();
     let models: OpenRouterModel[] = [];
 
-    // Normalize data
     if (provider === 'gemini') {
-        // Google returns { models: [ { name: 'models/gemini-pro', ... } ] }
         if (data.models && Array.isArray(data.models)) {
             models = data.models.map((m: any) => ({
-                id: m.name.replace('models/', ''), // Strip prefix for cleaner usage in our app
+                id: m.name.replace('models/', ''), 
                 name: m.displayName || m.name,
                 description: m.description
             }));
         }
     } else {
-        // OpenAI/Groq/OpenRouter usually return { data: [ { id: '...', ... } ] }
         const list = data.data || data;
         if (Array.isArray(list)) {
             models = list.map((m: any) => ({
                 id: m.id,
-                name: m.name || m.id, // Fallback to ID if name is missing
-                pricing: m.pricing // Only OpenRouter usually provides this
+                name: m.name || m.id,
+                pricing: m.pricing
             }));
         }
     }
@@ -140,12 +132,7 @@ export const fetchModelsForProvider = async (provider: Provider, apiKey: string)
   }
 };
 
-export const getAvailableModels = async (): Promise<OpenRouterModel[]> => {
-  // Legacy support, redirects to fetchModelsForProvider
-  return fetchModelsForProvider('openrouter', '');
-};
-
-// === OpenAI Compatible Sender (Works for OpenRouter, OpenAI, Groq) ===
+// === OpenAI Compatible Sender ===
 const sendOpenAICompatible = async (
   baseUrl: string,
   apiKey: string,
@@ -159,7 +146,6 @@ const sendOpenAICompatible = async (
     "Content-Type": "application/json"
   };
 
-  // Add OpenRouter specific headers
   if (baseUrl.includes('openrouter')) {
     headers["HTTP-Referer"] = window.location.origin;
     headers["X-Title"] = title;
@@ -194,51 +180,47 @@ const sendOpenAICompatible = async (
   };
 };
 
-// === Gemini Sender (Google REST API) ===
+// === Gemini Sender ===
 const sendGemini = async (
   apiKey: string,
   model: string,
   systemPrompt: string,
   history: Message[],
   currentAgentId: 'A' | 'B',
+  contextLimit: number,
   maxTokensConfig?: { enabled: boolean; limit: number }
 ): Promise<ChatResponse> => {
-  // If the model ID was stored without 'models/' prefix (which we do in fetchModels), we might need to add it back 
-  // or the API might accept it. Google API typically expects `models/gemini-pro`.
   const modelId = model.startsWith('models/') ? model : `models/${model}`;
   const url = `https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}`;
 
-  // Pruning logic for Gemini
   let contentsToProcess = history.filter(m => m.sender !== 'System');
   let effectiveSystemPrompt = systemPrompt;
   
-  if (maxTokensConfig?.enabled) {
-    // 1. Check System Prompt
-    const sysTokens = estimateTokens(systemPrompt);
-    let currentBudget = 0;
+  // 1. Check System Prompt
+  const sysTokens = estimateTokens(systemPrompt);
+  let currentBudget = 0;
     
-    if (sysTokens > maxTokensConfig.limit) {
-         const maxChars = maxTokensConfig.limit * 4;
-         effectiveSystemPrompt = systemPrompt.substring(0, maxChars) + "... [Truncado]";
-         currentBudget = estimateTokens(effectiveSystemPrompt);
-    } else {
-         currentBudget = sysTokens;
-    }
-
-    // 2. Filter history
-    const keptParams: any[] = [];
-    for (let i = contentsToProcess.length - 1; i >= 0; i--) {
-        const msg = contentsToProcess[i];
-        const t = estimateTokens(msg.text);
-        if (currentBudget + t <= maxTokensConfig.limit) {
-            keptParams.unshift(msg);
-            currentBudget += t;
-        } else {
-            break;
-        }
-    }
-    contentsToProcess = keptParams;
+  if (sysTokens > contextLimit) {
+       const maxChars = contextLimit * 4;
+       effectiveSystemPrompt = systemPrompt.substring(0, maxChars) + "... [Truncado]";
+       currentBudget = estimateTokens(effectiveSystemPrompt);
+  } else {
+       currentBudget = sysTokens;
   }
+
+  // 2. Filter history (Backwards)
+  const keptParams: any[] = [];
+  for (let i = contentsToProcess.length - 1; i >= 0; i--) {
+      const msg = contentsToProcess[i];
+      const t = estimateTokens(msg.text);
+      if (currentBudget + t <= contextLimit) {
+          keptParams.unshift(msg);
+          currentBudget += t;
+      } else {
+          break;
+      }
+  }
+  contentsToProcess = keptParams;
 
   const contents = contentsToProcess.map(msg => ({
     role: msg.sender === currentAgentId ? 'model' : 'user',
@@ -256,7 +238,6 @@ const sendGemini = async (
       payload.generationConfig.maxOutputTokens = maxTokensConfig.limit;
   }
 
-  // Add system instruction if available
   if (effectiveSystemPrompt) {
     payload.systemInstruction = {
       parts: [{ text: effectiveSystemPrompt }]
@@ -275,11 +256,8 @@ const sendGemini = async (
   }
 
   const data = await response.json();
-  
-  // Extract text
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "(Sin respuesta)";
   
-  // Extract usage (Gemini format -> Standard format)
   const usage = data.usageMetadata ? {
     prompt_tokens: data.usageMetadata.promptTokenCount || 0,
     completion_tokens: data.usageMetadata.candidatesTokenCount || 0,
@@ -298,35 +276,20 @@ export const sendMessageToOpenRouter = async (
   history: Message[],
   currentAgentId: 'A' | 'B',
   provider: Provider = 'openrouter',
+  contextLimit: number,
   maxTokensConfig?: { enabled: boolean; limit: number }
 ): Promise<ChatResponse> => {
   if (!apiKey) throw new Error("API Key faltante");
 
-  // Determine limits
-  const isLimitEnabled = maxTokensConfig?.enabled || false;
-  const limit = maxTokensConfig?.limit || 1000;
+  const isOutputLimitEnabled = maxTokensConfig?.enabled || false;
+  const outputLimit = maxTokensConfig?.limit;
+  const effectiveSystemPrompt = systemPrompt;
 
-  // Modify System Prompt to include token limit instruction if enabled
-  let effectiveSystemPrompt = systemPrompt;
-  if (isLimitEnabled) {
-      effectiveSystemPrompt += `\n\n[NOTA DEL SISTEMA: Tienes un límite estricto de ${limit} tokens para esta respuesta. Sé conciso y asegúrate de terminar tus ideas antes de alcanzar el límite.]`;
-  }
-
-  // Prepare messages with pruning if enabled
-  // Note: Gemini handles its own structure in its function
+  // Prepare messages with Dynamic Context Pruning
   let openAIMessages: OpenRouterMessage[];
   
-  if (isLimitEnabled && provider !== 'gemini') {
-      openAIMessages = pruneHistory(effectiveSystemPrompt, history, currentAgentId, limit);
-  } else if (provider !== 'gemini') {
-      // Standard full history
-      openAIMessages = [
-        { role: 'system', content: effectiveSystemPrompt },
-        ...history.filter(m => m.sender !== 'System').map((msg) => ({
-          role: msg.sender === currentAgentId ? 'assistant' : 'user',
-          content: msg.text,
-        }) as OpenRouterMessage),
-      ];
+  if (provider !== 'gemini') {
+      openAIMessages = pruneHistory(effectiveSystemPrompt, history, currentAgentId, contextLimit);
   } else {
       openAIMessages = []; // Not used for Gemini
   }
@@ -339,7 +302,7 @@ export const sendMessageToOpenRouter = async (
         model,
         openAIMessages,
         "Nodemat Contest",
-        isLimitEnabled ? limit : undefined
+        isOutputLimitEnabled ? outputLimit : undefined
       );
     
     case 'openai':
@@ -349,7 +312,7 @@ export const sendMessageToOpenRouter = async (
         model,
         openAIMessages,
         "Nodemat Contest",
-        isLimitEnabled ? limit : undefined
+        isOutputLimitEnabled ? outputLimit : undefined
       );
 
     case 'groq':
@@ -359,7 +322,7 @@ export const sendMessageToOpenRouter = async (
         model,
         openAIMessages,
         "Nodemat Contest",
-        isLimitEnabled ? limit : undefined
+        isOutputLimitEnabled ? outputLimit : undefined
       );
 
     case 'gemini':
@@ -369,6 +332,7 @@ export const sendMessageToOpenRouter = async (
           effectiveSystemPrompt, 
           history, 
           currentAgentId, 
+          contextLimit,
           maxTokensConfig
       );
 

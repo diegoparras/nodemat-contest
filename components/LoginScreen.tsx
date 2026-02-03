@@ -22,13 +22,13 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0B1120] text-slate-200 p-4">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-8">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#0B1120] text-slate-900 dark:text-slate-200 p-4 transition-colors duration-300">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-2xl p-8 transition-colors duration-300">
         <div className="text-center mb-8">
-           <h1 className="font-bold text-3xl tracking-tight text-white mb-2">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400">Nodemat</span> Contest
+           <h1 className="font-bold text-3xl tracking-tight text-slate-900 dark:text-white mb-2">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-orange-500 dark:from-red-400 dark:to-orange-400">Nodemat</span> Contest
            </h1>
-           <p className="text-slate-500 text-sm">Plataforma de Interacción entre Modelos LLMs</p>
+           <p className="text-slate-500 dark:text-slate-500 text-sm">Plataforma de Interacción entre Modelos LLMs</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -38,7 +38,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
               type="text" 
               value={user}
               onChange={e => setUser(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-red-500 transition-all"
+              className="w-full bg-gray-50 dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-lg px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 transition-all"
               placeholder="admin"
             />
           </div>
@@ -48,13 +48,13 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
               type="password" 
               value={pass}
               onChange={e => setPass(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-red-500 transition-all"
+              className="w-full bg-gray-50 dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-lg px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 transition-all"
               placeholder="••••••"
             />
           </div>
           
           {error && (
-            <div className="text-red-400 text-sm text-center font-medium bg-red-900/20 p-2 rounded">
+            <div className="text-red-600 dark:text-red-400 text-sm text-center font-medium bg-red-100 dark:bg-red-900/20 p-2 rounded border border-red-200 dark:border-transparent">
               {error}
             </div>
           )}
@@ -73,19 +73,19 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
            href="https://github.com/diegoparras/nodemat-contest" 
            target="_blank" 
            rel="noopener noreferrer"
-           className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-sm"
+           className="flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
          >
            <Github className="w-4 h-4" />
            Explorá este proyecto en GitHub (Licencia MIT)
          </a>
 
-         <div className="w-1/2 border-t border-slate-800 my-1"></div>
+         <div className="w-1/2 border-t border-gray-300 dark:border-slate-800 my-1"></div>
 
          <a 
            href="https://chat.nodemat.com" 
            target="_blank" 
            rel="noopener noreferrer"
-           className="flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors text-sm font-medium animate-pulse hover:animate-none"
+           className="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-sm font-medium animate-pulse hover:animate-none"
          >
            <MessageCircle className="w-4 h-4" />
            También podés probar Nodemat CHAT aquí

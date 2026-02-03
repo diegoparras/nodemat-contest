@@ -113,23 +113,23 @@ const AgentConfigPanel: React.FC<Props> = ({ config, onChange, disabled, current
     (config.model === 'custom' || (config.model !== '' && !config.modelList.find(m => m.id === config.model)));
 
   return (
-    <div className={`flex flex-col w-full bg-slate-900/80 backdrop-blur-sm border ${borderColor} rounded-xl overflow-hidden shadow-xl transition-all duration-300`}>
+    <div className={`flex flex-col w-full bg-white dark:bg-slate-900/80 backdrop-blur-sm border ${borderColor} rounded-xl overflow-hidden shadow-xl transition-all duration-300`}>
       {/* Header */}
       <div 
-        className={`${headerGradient} p-4 border-b ${borderColor} flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors select-none`}
+        className={`${headerGradient} p-4 border-b ${borderColor} flex items-center justify-between cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors select-none`}
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
         <div className="flex items-center gap-2">
-          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isCollapsed ? '-rotate-90' : 'rotate-0'}`} />
-          <Bot className={`w-5 h-5 ${config.id === 'A' ? 'text-cyan-400' : 'text-purple-400'}`} />
-          <h2 className="font-bold text-lg text-white truncate max-w-[120px]">{config.name}</h2>
+          <ChevronDown className={`w-4 h-4 text-slate-500 dark:text-slate-400 transition-transform duration-300 ${isCollapsed ? '-rotate-90' : 'rotate-0'}`} />
+          <Bot className={`w-5 h-5 ${config.id === 'A' ? 'text-cyan-600 dark:text-cyan-400' : 'text-purple-600 dark:text-purple-400'}`} />
+          <h2 className="font-bold text-lg text-slate-800 dark:text-white truncate max-w-[120px]">{config.name}</h2>
         </div>
         <div className="flex flex-col items-end">
-             <div className={`px-2 py-0.5 rounded text-xs font-mono bg-black/40 ${config.id === 'A' ? 'text-cyan-300' : 'text-purple-300'}`}>
+             <div className={`px-2 py-0.5 rounded text-xs font-mono bg-black/10 dark:bg-black/40 ${config.id === 'A' ? 'text-cyan-700 dark:text-cyan-300' : 'text-purple-700 dark:text-purple-300'}`}>
               AGENTE {config.id}
             </div>
             {currentCost > 0 && (
-                <div className="flex items-center text-[10px] text-green-400 mt-1 font-mono">
+                <div className="flex items-center text-[10px] text-green-600 dark:text-green-400 mt-1 font-mono">
                     <DollarSign className="w-3 h-3" />
                     {currentCost.toFixed(6)}
                 </div>
@@ -143,7 +143,7 @@ const AgentConfigPanel: React.FC<Props> = ({ config, onChange, disabled, current
             <div className="p-6 space-y-5">
                 {/* Name Input */}
                 <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
                     <Settings className="w-3 h-3" /> Nombre
                 </label>
                 <input
@@ -151,7 +151,7 @@ const AgentConfigPanel: React.FC<Props> = ({ config, onChange, disabled, current
                     value={config.name}
                     onChange={(e) => handleChange('name', e.target.value)}
                     disabled={disabled}
-                    className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="w-full bg-gray-50 dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     placeholder="Nombre del Agente"
                 />
                 </div>
@@ -159,19 +159,19 @@ const AgentConfigPanel: React.FC<Props> = ({ config, onChange, disabled, current
                 {/* Provider Selector & Connection */}
                 <div className="space-y-1.5">
                     <div className="flex justify-between items-center">
-                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
                             <Database className="w-3 h-3" /> Proveedor
                         </label>
                         {/* Connection Status Indicator */}
                         <div className="flex items-center gap-2">
                             {config.connectionError && (
-                                <span className="text-[10px] text-red-400 max-w-[120px] truncate" title={config.connectionError}>
+                                <span className="text-[10px] text-red-500 dark:text-red-400 max-w-[120px] truncate" title={config.connectionError}>
                                     {config.connectionError}
                                 </span>
                             )}
                             <div className={`w-2 h-2 rounded-full transition-all duration-500 ${
                                 config.isConnected ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 
-                                config.connectionError ? 'bg-red-500' : 'bg-slate-700'
+                                config.connectionError ? 'bg-red-500' : 'bg-slate-400 dark:bg-slate-700'
                             }`} />
                         </div>
                     </div>
@@ -193,7 +193,7 @@ const AgentConfigPanel: React.FC<Props> = ({ config, onChange, disabled, current
                                     setModelSearch('');
                                 }}
                                 disabled={disabled || config.isConnected} // Disable changing provider while connected
-                                className={`w-full appearance-none bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all pr-8 ${config.isConnected ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`w-full appearance-none bg-gray-50 dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all pr-8 ${config.isConnected ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 {PROVIDERS.map(p => (
                                     <option key={p.id} value={p.id}>{p.name}</option>
@@ -208,8 +208,8 @@ const AgentConfigPanel: React.FC<Props> = ({ config, onChange, disabled, current
                             disabled={disabled || config.isConnecting || (!config.isConnected && !config.apiKey)}
                             className={`px-3 rounded-lg border transition-all flex items-center justify-center ${
                                 config.isConnected 
-                                    ? 'bg-red-900/20 border-red-800 text-red-400 hover:bg-red-900/40' 
-                                    : 'bg-green-900/20 border-green-800 text-green-400 hover:bg-green-900/40 disabled:opacity-30 disabled:cursor-not-allowed'
+                                    ? 'bg-red-100 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40' 
+                                    : 'bg-green-100 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40 disabled:opacity-30 disabled:cursor-not-allowed'
                             } ${config.isConnecting ? 'opacity-70 cursor-wait' : ''}`}
                             title={
                                 config.isConnected ? "Desconectar" : 
@@ -230,7 +230,7 @@ const AgentConfigPanel: React.FC<Props> = ({ config, onChange, disabled, current
 
                 {/* API Key */}
                 <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
                     <Key className="w-3 h-3" /> API Key ({PROVIDERS.find(p => p.id === config.provider)?.name})
                 </label>
                 <div className="relative">
@@ -239,13 +239,13 @@ const AgentConfigPanel: React.FC<Props> = ({ config, onChange, disabled, current
                         value={config.apiKey}
                         onChange={(e) => handleChange('apiKey', e.target.value)}
                         disabled={disabled} 
-                        className={`w-full bg-slate-800/50 border rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono ${!config.apiKey && !config.isConnected ? 'border-amber-500/50' : 'border-slate-700'}`}
+                        className={`w-full bg-gray-50 dark:bg-slate-800/50 border rounded-lg pl-3 pr-8 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono ${!config.apiKey && !config.isConnected ? 'border-amber-500/50' : 'border-gray-300 dark:border-slate-700'}`}
                         placeholder={config.provider === 'openrouter' ? "sk-or-..." : "sk-..."}
                     />
                     {config.apiKey && !disabled && (
                         <button 
                             onClick={() => handleChange('apiKey', '')}
-                            className="absolute right-2 top-2 text-slate-500 hover:text-red-400 transition-colors"
+                            className="absolute right-2 top-2 text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                             title="Borrar API Key"
                         >
                             <Trash2 className="w-4 h-4" />
@@ -257,7 +257,7 @@ const AgentConfigPanel: React.FC<Props> = ({ config, onChange, disabled, current
                 {/* Model Selector */}
                 <div className="space-y-1.5">
                 <div className="flex justify-between items-center">
-                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
                     <Bot className="w-3 h-3" /> Modelo
                     </label>
                 </div>
@@ -272,7 +272,7 @@ const AgentConfigPanel: React.FC<Props> = ({ config, onChange, disabled, current
                             onChange={(e) => setModelSearch(e.target.value)}
                             placeholder={config.isConnected ? "Buscar modelo..." : "Conecta para buscar"}
                             disabled={disabled || !config.isConnected}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-7 pr-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-full bg-gray-100 dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg pl-7 pr-2 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                     </div>
 
@@ -280,7 +280,7 @@ const AgentConfigPanel: React.FC<Props> = ({ config, onChange, disabled, current
                         value={isCustomModel ? 'custom' : config.model}
                         onChange={(e) => handleChange('model', e.target.value)}
                         disabled={disabled || !config.isConnected}
-                        className="w-full appearance-none bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all pr-8"
+                        className="w-full appearance-none bg-gray-50 dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all pr-8"
                     >
                         {!config.isConnected ? (
                              <option value="">Conecta para ver modelos</option>
@@ -317,7 +317,7 @@ const AgentConfigPanel: React.FC<Props> = ({ config, onChange, disabled, current
                     value={config.model === 'custom' ? '' : config.model}
                     onChange={(e) => handleChange('model', e.target.value)}
                     disabled={disabled}
-                    className="w-full mt-2 bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
+                    className="w-full mt-2 bg-gray-50 dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
                     placeholder="Escribe el ID del modelo (ej: openai/gpt-4-turbo)"
                     autoFocus
                 />
@@ -326,14 +326,14 @@ const AgentConfigPanel: React.FC<Props> = ({ config, onChange, disabled, current
 
                 {/* System Prompt */}
                 <div className="space-y-1.5 flex flex-col">
-                <label className="text-xs font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
                     <FileText className="w-3 h-3" /> System Prompt
                 </label>
                 <textarea
                     value={config.systemPrompt}
                     onChange={(e) => handleChange('systemPrompt', e.target.value)}
                     disabled={disabled}
-                    className="w-full min-h-[120px] bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none custom-scrollbar font-mono leading-tight"
+                    className="w-full min-h-[120px] bg-gray-50 dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none custom-scrollbar font-mono leading-tight"
                     placeholder="Instrucciones para el agente..."
                 />
                 </div>

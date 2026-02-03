@@ -10,7 +10,7 @@ import LoginScreen from './components/LoginScreen';
 import Modal from './components/Modal';
 import StorageModal from './components/StorageModal';
 import HistoryList from './components/HistoryList';
-import { Terminal, Swords, DollarSign, Menu, X, LogOut, Database } from 'lucide-react';
+import { Terminal, Swords, DollarSign, Menu, X, LogOut, Database, Sun, Moon } from 'lucide-react';
 
 const App: React.FC = () => {
   // Login State
@@ -27,6 +27,8 @@ const App: React.FC = () => {
   
   // UI State
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // Default to true (Dark Mode)
+  const [isDarkMode, setIsDarkMode] = useState(true);
   
   // Cost State
   const [costA, setCostA] = useState<number>(0);
@@ -54,6 +56,36 @@ const App: React.FC = () => {
   const chatEndRef = useRef<HTMLDivElement>(null);
   
   // --- Effects ---
+
+  // Initialize Dark Mode from Local Storage (Defaulting to Dark)
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('nodemat_theme');
+    
+    // Only switch to light if explicitly saved as 'light'. Otherwise default to Dark.
+    if (savedTheme === 'light') {
+      setIsDarkMode(false);
+      document.documentElement.classList.remove('dark');
+    } else {
+      setIsDarkMode(true);
+      document.documentElement.classList.add('dark');
+      if (!savedTheme) {
+          localStorage.setItem('nodemat_theme', 'dark');
+      }
+    }
+  }, []);
+
+  // Toggle Theme Function
+  const toggleTheme = () => {
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
+    if (newMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('nodemat_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('nodemat_theme', 'light');
+    }
+  };
 
   // Load History from Local Storage on Mount
   useEffect(() => {
@@ -140,6 +172,8 @@ const App: React.FC = () => {
       }
 
       try {
+        const dynamicContextLimit = Math.max(3000, simState.maxIterations * 3000);
+
         const response = await sendMessageToOpenRouter(
           currentAgent.apiKey,
           currentAgent.model,
@@ -147,6 +181,7 @@ const App: React.FC = () => {
           messages,
           currentAgent.id,
           currentAgent.provider,
+          dynamicContextLimit,
           { enabled: simState.useMaxTokens, limit: simState.maxTokens }
         );
 
@@ -250,14 +285,12 @@ const App: React.FC = () => {
       }
       if (window.confirm('Cargar este chat reemplazará los mensajes actuales. ¿Continuar?')) {
           setMessages(chat.messages);
-          // Set view mode
           setSimState(prev => ({
               ...prev,
-              status: 'idle', // Just viewing
+              status: 'idle',
               error: null,
               logs: [`Historial cargado: ${chat.scenarioName}`]
           }));
-          // Note: We do NOT restore agent configs/models, only the messages for viewing
       }
   };
 
@@ -316,8 +349,7 @@ const App: React.FC = () => {
   };
 
   const handleReset = () => {
-    // 1. Auto-save current chat if it has meaningful content
-    if (messages.length > 1) { // More than just topic
+    if (messages.length > 1) { 
         const scenarioName = SCENARIOS.find(s => s.id === currentScenarioId)?.name || 'Custom';
         const newSavedChat: SavedChat = {
             id: Date.now().toString(),
@@ -331,7 +363,6 @@ const App: React.FC = () => {
         setSavedChats(prev => [...prev, newSavedChat]);
     }
 
-    // 2. Clear ONLY the messages and reset sim counters. Do NOT reset Agents.
     setMessages([]);
     setCostA(0);
     setCostB(0);
@@ -387,14 +418,34 @@ const App: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportJSON = () => {
+      const debugData = {
+          metadata: {
+              timestamp: new Date().toISOString(),
+              scenario: currentScenarioId,
+              agentA: { name: agentA.name, model: agentA.model },
+              agentB: { name: agentB.name, model: agentB.model },
+              simulationState: simState
+          },
+          messages: messages
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(debugData, null, 2));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", `nodemat-debug-${Date.now()}.json`);
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+  };
+
   if (!isLoggedIn) {
       return <LoginScreen onLogin={() => setIsLoggedIn(true)} />;
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#0B1120] text-slate-200 overflow-hidden">
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-[#0B1120] text-slate-900 dark:text-slate-200 overflow-hidden transition-colors duration-300">
       
-      {/* Warning Modal */}
       <Modal 
         isOpen={showWarningModal} 
         onClose={() => setShowWarningModal(false)}
@@ -403,7 +454,6 @@ const App: React.FC = () => {
         <p>Antes de la diversión, tenés que cargar las api keys de ambos agentes, conectarlos y elegir un modelo.</p>
       </Modal>
 
-      {/* Storage Modal */}
       <StorageModal 
         isOpen={showStorageModal}
         onClose={() => setShowStorageModal(false)}
@@ -413,11 +463,11 @@ const App: React.FC = () => {
       />
 
       {/* Top Bar */}
-      <header className="h-16 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md flex items-center justify-between px-4 md:px-6 shrink-0 z-20">
+      <header className="h-16 border-b border-gray-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/50 backdrop-blur-md flex items-center justify-between px-4 md:px-6 shrink-0 z-20">
         <div className="flex items-center gap-4">
           <button 
              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-             className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+             className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >
              {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -426,8 +476,8 @@ const App: React.FC = () => {
             <div className="bg-gradient-to-r from-red-600 to-orange-600 p-2 rounded-lg shadow-lg shadow-red-900/20 hidden md:block">
                <Swords className="w-5 h-5 text-white" />
             </div>
-            <h1 className="font-bold text-xl tracking-tight text-white">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400">Nodemat</span> Contest
+            <h1 className="font-bold text-xl tracking-tight dark:text-white text-slate-900">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-orange-500 dark:from-red-400 dark:to-orange-400">Nodemat</span> Contest
             </h1>
           </div>
         </div>
@@ -436,25 +486,33 @@ const App: React.FC = () => {
         <div className="flex items-center gap-3 md:gap-6 text-xs font-mono">
             <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-cyan-500"></div>
-                <span className="text-slate-400 hidden md:inline">Agente A:</span>
-                <span className="text-green-400 flex items-center"><DollarSign className="w-3 h-3" />{costA.toFixed(5)}</span>
+                <span className="text-slate-500 dark:text-slate-400 hidden md:inline">Agente A:</span>
+                <span className="text-emerald-600 dark:text-green-400 flex items-center"><DollarSign className="w-3 h-3" />{costA.toFixed(5)}</span>
             </div>
             <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                <span className="text-slate-400 hidden md:inline">Agente B:</span>
-                <span className="text-green-400 flex items-center"><DollarSign className="w-3 h-3" />{costB.toFixed(5)}</span>
+                <span className="text-slate-500 dark:text-slate-400 hidden md:inline">Agente B:</span>
+                <span className="text-emerald-600 dark:text-green-400 flex items-center"><DollarSign className="w-3 h-3" />{costB.toFixed(5)}</span>
             </div>
         </div>
 
         <div className="text-xs font-mono text-slate-500 flex items-center gap-4">
           <button onClick={() => setShowStorageModal(true)} title="Base de Datos / Memoria">
-            <Database className="w-4 h-4 text-blue-400 hover:text-blue-300" />
+            <Database className="w-4 h-4 text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300" />
           </button>
           
-          <span className={`w-2 h-2 rounded-full ${simState.status === 'running' ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`}></span>
+          <button 
+             onClick={toggleTheme}
+             title={isDarkMode ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
+             className="text-slate-600 dark:text-slate-400 hover:text-orange-500 dark:hover:text-yellow-400 transition-colors"
+          >
+             {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+          
+          <span className={`w-2 h-2 rounded-full ${simState.status === 'running' ? 'bg-green-500 animate-pulse' : 'bg-slate-400 dark:bg-slate-600'}`}></span>
           <span className="hidden md:inline">{simState.status.toUpperCase()}</span>
           <button onClick={() => setIsLoggedIn(false)} title="Cerrar Sesión">
-              <LogOut className="w-4 h-4 text-slate-400 hover:text-red-400" />
+              <LogOut className="w-4 h-4 text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400" />
           </button>
         </div>
       </header>
@@ -465,13 +523,13 @@ const App: React.FC = () => {
         {/* Left Config Panel (Collapsible) */}
         <div 
           className={`
-            border-r border-slate-800 bg-[#0f1623] transition-all duration-300 ease-in-out z-30 absolute md:relative h-full
+            border-r border-gray-200 dark:border-slate-800 bg-white dark:bg-[#0f1623] transition-all duration-300 ease-in-out z-30 absolute md:relative h-full shadow-lg dark:shadow-none
             ${isSidebarOpen ? 'translate-x-0 w-80 opacity-100' : '-translate-x-full w-0 opacity-0 md:w-0 md:overflow-hidden md:translate-x-0'}
           `}
         >
            <div className="h-full overflow-y-auto custom-scrollbar w-80 flex flex-col">
               <div className="p-4 flex-1">
-                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                     <Terminal className="w-4 h-4" /> Configuración
                 </h3>
                 <div className="space-y-6">
@@ -483,7 +541,7 @@ const App: React.FC = () => {
                         currentCost={costA}
                     />
                     <div className="flex items-center justify-center">
-                        <span className="text-xs font-bold text-slate-600 bg-slate-900 px-2 py-1 rounded-full border border-slate-800">VS</span>
+                        <span className="text-xs font-bold text-slate-600 dark:text-slate-400 bg-gray-200 dark:bg-slate-900 px-2 py-1 rounded-full border border-gray-300 dark:border-slate-800">VS</span>
                     </div>
                     <AgentConfigPanel 
                         config={agentB} 
@@ -495,7 +553,6 @@ const App: React.FC = () => {
                 </div>
               </div>
               
-              {/* History Section at bottom of sidebar */}
               <HistoryList 
                 history={savedChats}
                 onDelete={deleteChat}
@@ -505,16 +562,16 @@ const App: React.FC = () => {
         </div>
 
         {/* Center Chat Arena */}
-        <div className="flex-1 flex flex-col relative bg-slate-950/50">
+        <div className="flex-1 flex flex-col relative bg-gray-50/50 dark:bg-slate-950/50">
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar scroll-smooth">
                 <div className="max-w-3xl mx-auto min-h-full flex flex-col justify-end">
                     {messages.length === 0 && (
-                        <div className="flex flex-col items-center justify-center text-slate-600 py-20 opacity-50">
+                        <div className="flex flex-col items-center justify-center text-slate-400 dark:text-slate-600 py-20 opacity-50">
                             <Swords className="w-16 h-16 mb-4 stroke-1 opacity-50" />
                             <p className="text-lg font-light mb-2">Configura los agentes o elige un desafío</p>
-                            <p className="text-sm text-slate-500">
-                                Escenario actual: <span className="text-purple-400">{SCENARIOS.find(s => s.id === currentScenarioId)?.name}</span>
+                            <p className="text-sm text-slate-400 dark:text-slate-500">
+                                Escenario actual: <span className="text-purple-500 dark:text-purple-400">{SCENARIOS.find(s => s.id === currentScenarioId)?.name}</span>
                             </p>
                         </div>
                     )}
@@ -533,7 +590,7 @@ const App: React.FC = () => {
             {/* Turn Indicator Overlay */}
             {simState.status === 'running' && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 pointer-events-none">
-                    <div className="bg-slate-900/80 backdrop-blur text-white px-4 py-1.5 rounded-full text-xs font-mono border border-slate-700 shadow-xl flex items-center gap-2">
+                    <div className="bg-white/90 dark:bg-slate-900/80 backdrop-blur text-slate-800 dark:text-white px-4 py-1.5 rounded-full text-xs font-mono border border-gray-200 dark:border-slate-700 shadow-xl flex items-center gap-2">
                          <div className={`w-2 h-2 rounded-full animate-bounce ${simState.currentTurn === 'A' ? 'bg-cyan-500' : 'bg-purple-500'}`} />
                          Pensando: {simState.currentTurn === 'A' ? agentA.name : agentB.name}...
                     </div>
@@ -556,6 +613,7 @@ const App: React.FC = () => {
         currentScenario={currentScenarioId}
         onScenarioChange={handleScenarioChange}
         onExport={handleExport}
+        onExportJSON={handleExportJSON}
         hasMessages={messages.length > 0}
         onToggleMaxTokens={(enabled) => setSimState(s => ({ ...s, useMaxTokens: enabled }))}
         onMaxTokensChange={(n) => setSimState(s => ({ ...s, maxTokens: n }))}
