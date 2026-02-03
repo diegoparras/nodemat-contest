@@ -1,0 +1,5 @@
+{
+  "name": "Nodemat Contest",
+  "description": "Plataforma para simular conversaciones entre dos modelos de IA utilizando OpenRouter.",
+  "requestFramePermissions": []
+}
